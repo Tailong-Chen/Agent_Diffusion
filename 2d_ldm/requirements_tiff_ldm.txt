@@ -1,0 +1,33 @@
+# TIFF堆栈LDM训练所需依赖
+# 使用方法: pip install -r requirements_tiff_ldm.txt
+
+# 深度学习框架
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# MONAI及其依赖
+monai>=1.2.0
+monai-generative>=0.2.0
+
+# 如果上面的monai-generative安装失败，使用下面的从源码安装
+# git+https://github.com/Project-MONAI/GenerativeModels.git
+
+# 图像处理
+tifffile>=2023.0.0  # TIFF文件读写（推荐）
+Pillow>=9.0.0       # 备选图像库
+imageio>=2.0.0      # 额外的图像IO支持
+
+# 数据处理和科学计算
+numpy>=1.22.0
+scipy>=1.9.0
+
+# 可视化
+matplotlib>=3.5.0
+tqdm>=4.60.0
+
+# 可选但推荐
+# tensorboard>=2.11.0  # 用于训练可视化
+# jupyter>=1.0.0       # 用于运行notebook
+# ipywidgets>=8.0.0    # Jupyter交互组件
+
