@@ -27,7 +27,8 @@ def train_one_epoch(model, model_without_ddp, data_loader, optimizer, device, ep
 
     for data_iter_step, (x, labels) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         # per iteration (instead of per epoch) lr scheduler
-        lr_sched.adjust_learning_rate(optimizer, data_iter_step / len(data_loader) + epoch, args)
+        if data_iter_step % args.accum_iter == 0:
+            lr_sched.adjust_learning_rate(optimizer, data_iter_step / len(data_loader) + epoch, args)
 
         # normalize image to [-1, 1]
         x = x.to(device, non_blocking=True).to(torch.float32).div_(255)
@@ -42,13 +43,15 @@ def train_one_epoch(model, model_without_ddp, data_loader, optimizer, device, ep
             print("Loss is {}, stopping training".format(loss_value))
             sys.exit(1)
 
-        optimizer.zero_grad()
+        loss = loss / args.accum_iter
         loss.backward()
-        optimizer.step()
+        
+        if (data_iter_step + 1) % args.accum_iter == 0:
+            optimizer.step()
+            optimizer.zero_grad()
+            model_without_ddp.update_ema()
 
         torch.cuda.synchronize()
-
-        model_without_ddp.update_ema()
 
         metric_logger.update(loss=loss_value)
         lr = optimizer.param_groups[0]["lr"]
