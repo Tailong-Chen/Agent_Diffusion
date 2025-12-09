@@ -138,7 +138,12 @@ def evaluate(model_without_ddp, args, epoch, batch_size=64, log_writer=None):
     if log_writer is not None:
         # Check if reference statistics exist for this image size
         compute_metrics = False
-        if args.img_size == 256:
+        
+        # Skip FID calculation for TIFF data as we don't have pre-computed stats
+        if hasattr(args, 'use_tiff') and args.use_tiff:
+            print(f"[Epoch {epoch}] Skipping FID calculation for TIFF dataset")
+            compute_metrics = False
+        elif args.img_size == 256:
             fid_statistics_file = 'fid_stats/jit_in256_stats.npz'
             compute_metrics = os.path.exists(fid_statistics_file)
         elif args.img_size == 512:

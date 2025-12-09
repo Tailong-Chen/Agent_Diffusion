@@ -156,9 +156,22 @@ def main(args):
         log_writer = None
 
     # Data augmentation transforms
+    # Define a custom RandomRotate90 transform
+    class RandomRotate90:
+        def __call__(self, img):
+            k = np.random.randint(0, 4)
+            if k == 0: return img
+            return img.rotate(k * 90)
+
+    # Transform pipeline (Cropping is now handled by Dataset if structure map is used)
+    # But we still need a fallback crop in case dataset didn't crop (e.g. image too small or no structure map)
+    # However, if dataset cropped, RandomCrop will just take the whole thing if size matches.
+    
     transform_train = transforms.Compose([
-        transforms.Lambda(lambda img: center_crop_arr(img, args.img_size)),
+        # transforms.RandomCrop(args.img_size), # Removed: Dataset handles cropping
         transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.Lambda(lambda img: RandomRotate90()(img)),
         transforms.PILToTensor()
     ])
 
@@ -168,13 +181,24 @@ def main(args):
         if os.path.isfile(tiff_path):
             # Single TIFF file
             if args.use_normalized_tiff:
+                # Check for structure map
+                structure_map_path = os.path.join(args.data_path, 'mt_skeletons.npy')
+                if not os.path.exists(structure_map_path):
+                    structure_map_path = None
+                    print("Warning: Structure map not found, using random cropping without structure awareness.")
+                
                 # Use normalized dataset for 16-bit images
                 dataset_train = TiffStackDatasetNormalized(
                     tiff_path, 
                     transform=transform_train,
-                    normalize_per_image=args.normalize_per_image
+                    normalize_per_image=args.normalize_per_image,
+                    structure_map_path=structure_map_path,
+                    crop_size=args.img_size
                 )
                 print(f"Using normalized TIFF dataset: {tiff_path}")
+                if structure_map_path:
+                    print(f"Using structure-aware cropping with map: {structure_map_path}")
+                
                 # Assuming normalized dataset returns 1 channel if grayscale
                 # We can check dataset properties if needed, but usually it's 1 channel for microscopy
                 args.in_channels = 1
@@ -297,7 +321,7 @@ def main(args):
                 epoch_name="last"
             )
 
-        if epoch % 100 == 0 and epoch > 0:
+        if epoch % 1000 == 0 and epoch > 0:
             misc.save_model(
                 args=args,
                 model_without_ddp=model_without_ddp,

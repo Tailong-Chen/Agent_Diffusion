@@ -107,15 +107,25 @@ class TiffStackDatasetNormalized(Dataset):
     """
     Dataset with proper 16-bit normalization for microscopy images.
     Preserves the full dynamic range of 16-bit data.
+    Supports structure-aware cropping if structure_map_path is provided.
     """
     
     def __init__(self, tiff_path, transform=None, max_frames=None, 
-                 normalize_per_image=True, global_min=None, global_max=None):
+                 normalize_per_image=True, global_min=None, global_max=None,
+                 structure_map_path=None, crop_size=None):
         self.tiff_path = tiff_path
         self.transform = transform
         self.normalize_per_image = normalize_per_image
         self.global_min = global_min
         self.global_max = global_max
+        self.crop_size = crop_size
+        
+        # Load structure map if provided
+        self.structure_map = None
+        if structure_map_path and os.path.exists(structure_map_path):
+            print(f"Loading structure map from {structure_map_path}")
+            self.structure_map = np.load(structure_map_path)
+            # Ensure structure map matches frame count later
         
         # Load TIFF and get number of frames
         with Image.open(tiff_path) as img:
@@ -174,6 +184,42 @@ class TiffStackDatasetNormalized(Dataset):
         
         # Convert to RGB (replicate channel)
         frame = Image.fromarray(frame_array, mode='L').convert('RGB')
+        
+        # Perform structure-aware cropping if enabled
+        if self.structure_map is not None and self.crop_size is not None:
+            # Get structure map for this frame
+            # Handle case where structure map might have fewer frames or mismatch
+            s_idx = idx % len(self.structure_map)
+            skeleton = self.structure_map[s_idx]
+            
+            W, H = frame.size
+            crop_h, crop_w = self.crop_size, self.crop_size
+            
+            if W >= crop_w and H >= crop_h:
+                best_crop = None
+                max_structure = -1
+                
+                # Try N times to find a good crop
+                for _ in range(10):
+                    x = np.random.randint(0, W - crop_w + 1)
+                    y = np.random.randint(0, H - crop_h + 1)
+                    
+                    # Check structure content
+                    skel_crop = skeleton[y:y+crop_h, x:x+crop_w]
+                    structure_count = np.sum(skel_crop > 0)
+                    
+                    if structure_count > max_structure:
+                        max_structure = structure_count
+                        best_crop = (x, y, crop_w, crop_h)
+                        
+                    # If we found something decent (e.g. > 1% pixels are structure), stop
+                    if structure_count > (crop_w * crop_h * 0.01):
+                        break
+                
+                # Apply the best crop found
+                if best_crop:
+                    x, y, w, h = best_crop
+                    frame = frame.crop((x, y, x+w, y+h))
         
         # Apply transforms if provided
         if self.transform is not None:

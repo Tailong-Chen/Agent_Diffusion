@@ -47,7 +47,7 @@ torchrun --nproc_per_node=$NUM_GPUS --master_port=29505 main_jit_unet.py \
     --use_normalized_tiff \
     --normalize_per_image \
     --num_workers 8 \
-    --save_last_freq 200 \
+    --save_last_freq 20 \
     --eval_freq 200 \
     --online_eval \
     --gen_bsz 1 \
