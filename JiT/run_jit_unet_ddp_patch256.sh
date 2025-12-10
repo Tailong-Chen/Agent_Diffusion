@@ -8,9 +8,9 @@ NUM_GPUS=2
 
 # 设置数据路径和参数
 # 假设数据在 ./Data/mt.tif
-TIFF_FILE="mt.tif"
+TIFF_FILE="ER.tif"
 DATA_PATH="./Data"
-OUTPUT_DIR="./output_jit_unet_ddp_patch256"
+OUTPUT_DIR="./output_jit_unet_ddp_patch256_ER"
 
 # 训练参数
 # 256x256 图像较小，可以增大 Batch Size
@@ -43,7 +43,7 @@ fi
 # 运行 torchrun
 # 注意：--nproc_per_node 必须等于使用的 GPU 数量
 # 设置 num_workers=0 以避免多进程导致的显存问题
-torchrun --nproc_per_node=$NUM_GPUS --master_port=29502 main_jit_unet.py \
+torchrun --nproc_per_node=$NUM_GPUS --master_port=29503 main_jit_unet.py \
     --model UNet \
     --tiff_file "$TIFF_FILE" \
     --data_path "$DATA_PATH" \
@@ -54,11 +54,11 @@ torchrun --nproc_per_node=$NUM_GPUS --master_port=29502 main_jit_unet.py \
     --use_tiff \
     --use_normalized_tiff \
     --normalize_per_image \
-    --num_workers 0 \
+    --num_workers 16 \
     --save_last_freq 20 \
     --eval_freq 200 \
     --online_eval \
-    --gen_bsz 2 \
+    --gen_bsz 8 \
     --img_size $IMG_SIZE \
     --accum_iter 1 \
     $RESUME_ARGS
