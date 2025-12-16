@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # 指定使用的 GPU ID (例如: 0,1)
-export CUDA_VISIBLE_DEVICES=2,3
+export CUDA_VISIBLE_DEVICES=4,5
 
 # 设置使用的GPU数量
 NUM_GPUS=2
 
 # 设置数据路径和参数
 # 假设数据在 ./Data/mt.tif
-TIFF_FILE="ER.tif"
+TIFF_FILE="Dark-mitochondrion_1024.tif"
 DATA_PATH="./Data"
-OUTPUT_DIR="./output_jit_unet_ddp_patch256_ER"
+OUTPUT_DIR="./output_jit_unet_ddp_patch256_mitochondrion"
 
 # 训练参数
 # 256x256 图像较小，可以增大 Batch Size
@@ -43,7 +43,7 @@ fi
 # 运行 torchrun
 # 注意：--nproc_per_node 必须等于使用的 GPU 数量
 # 设置 num_workers=0 以避免多进程导致的显存问题
-torchrun --nproc_per_node=$NUM_GPUS --master_port=29503 main_jit_unet.py \
+torchrun --nproc_per_node=$NUM_GPUS --master_port=29504 main_jit_unet.py \
     --model UNet \
     --tiff_file "$TIFF_FILE" \
     --data_path "$DATA_PATH" \
